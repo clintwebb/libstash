@@ -28,14 +28,6 @@
 #endif
 
 
-/* Get a consistent bool type */
-// #if HAVE_STDBOOL_H
-// # include <stdbool.h>
-// #else
-//   typedef enum {false = 0, true = 1} bool;
-// #endif
-
-
 // Since we will be using a number of bit masks to check for data status's and
 // so on, we should include some macros to make it easier.
 #define BIT_TEST(arg,val) (((arg) & (val)) == (val))
@@ -44,9 +36,6 @@
 #define BIT_TOGGLE(arg,val) ((arg) ^= (val))
 
 
-
-
-#define INVALID_HANDLE (-1)
 
 // global constants and other things go here.
 #define STASH_DEFAULT_PORT (13600)
