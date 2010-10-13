@@ -17,7 +17,7 @@
 #include <unistd.h>
 
 
-#if (LIBSTASH_VERSION != 0x00000600)
+#if (LIBSTASH_VERSION != 0x00000700)
 #error "Incorrect stash.h header version."
 #endif
 

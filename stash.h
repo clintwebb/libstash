@@ -11,8 +11,8 @@
 // services can ensure that the correct version is installed.
 // This version number should be incremented with every change that would
 // effect logic.
-#define LIBSTASH_VERSION 0x00000600
-#define LIBSTASH_VERSION_NAME "v0.06.00"
+#define LIBSTASH_VERSION 0x00000700
+#define LIBSTASH_VERSION_NAME "v0.07.00"
 
 
 #if (EXPBUF_VERSION < 0x00010200)
@@ -68,6 +68,8 @@
 #define STASH_CMD_OVERWRITE        (44)
 #define STASH_CMD_TRANSIENT        (45)
 #define STASH_CMD_NULL             (46)
+#define STASH_CMD_SORTASC          (47)
+#define STASH_CMD_SORTDESC         (48)
 													/// byte integer 8-bit (64 to 95)
 													/// integer 16-bit (96 to 127)
 #define STASH_CMD_FILE_SEQ         (96)
@@ -99,6 +101,7 @@
 #define STASH_CMD_COND_EXISTS      (166)
 #define STASH_CMD_SET_EXPIRY       (167)
 #define STASH_CMD_DELETE           (168)
+#define STASH_CMD_SORTENTRY        (169)
 													/// string (192 to 223)
 #define STASH_CMD_CREATE_USER      (192)
 #define STASH_CMD_DROP_USER        (193)
@@ -115,6 +118,7 @@
 #define STASH_CMD_CREATE_TABLE     (206)
 #define STASH_CMD_CREATE_NAME      (207)
 #define STASH_CMD_CREATE_KEY       (208)
+#define STASH_CMD_SORT             (209)
 
 #define STASH_CMD_COND_NAME        (222)
 #define STASH_CMD_COND_EQUALS      (223)
