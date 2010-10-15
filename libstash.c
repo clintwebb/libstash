@@ -133,8 +133,7 @@ static void cmdReplyRow(stash_reply_t *reply, const risp_length_t length, const 
 	assert(reply->stash);
 
 	// create a row object.
-	row = malloc(sizeof(*row));
-	bzero(row, sizeof(*row));
+	row = calloc(1, sizeof(*row));
 	row->identifier = 0x1234;
 	row->attrlist = ll_init(NULL);
 	row->reply = reply;
@@ -258,7 +257,7 @@ stash_t * stash_init(stash_t *stash)
 		s->internally_created = 0;
 	}
 	else {
-		s = malloc(sizeof(stash_t));
+		s = calloc(1, sizeof(stash_t));
 		s->internally_created = 1;
 	}
 	
@@ -485,7 +484,7 @@ stash_result_t stash_addserver(stash_t *stash, const char *host, int priority)
 	assert(stash);
 	assert(host);
 	
-	conn = malloc(sizeof(conn_t));
+	conn = calloc(1, sizeof(conn_t));
 	assert(conn);
 
 	conn->handle = -1;		// socket handle to the connected controller.
@@ -718,7 +717,7 @@ static stash_reply_t * getreply(stash_t *stash)
 	assert(stash->replypool);
 	reply = ll_get_head(stash->replypool);
 	if (reply == NULL || reply->operation == 0) {
-		reply = malloc(sizeof(stash_reply_t));
+		reply = calloc(1, sizeof(stash_reply_t));
 		reply->stash = stash;
 		reply->rows = ll_init(NULL);
 		assert(reply->rows);
@@ -1213,7 +1212,7 @@ void stash_set_attr(stash_attrlist_t *alist, stash_keyid_t keyid, stash_value_t 
 	
 	assert(alist && keyid > 0 && value && expires >= 0);
 	
-	attr = malloc(sizeof(attr_t));
+	attr = calloc(1, sizeof(attr_t));
 	assert(attr);
 	
 	attr->keyid = keyid;
@@ -1231,7 +1230,7 @@ stash_value_t * __value_str(const char *str)
 	
 	assert(str);
 	
-	val = malloc(sizeof(*val));
+	val = calloc(1, sizeof(*val));
 	assert(val);
 	
 	val->valtype = STASH_VALTYPE_STR;
@@ -1250,11 +1249,12 @@ stash_value_t * __value_blob(void *ptr, int len)
 	
 	assert(sizeof(size_t) == sizeof(len));
 	
-	val = malloc(sizeof(*val));
+	val = calloc(1, sizeof(*val));
 	assert(val);
 	
 	val->valtype = STASH_VALTYPE_STR;
 	val->value.str = malloc(len);
+	assert(val->value.str);
 	memcpy(val->value.str, ptr, len);
 	val->datalen = len;
 	assert(val->datalen > 0);
@@ -1267,7 +1267,7 @@ stash_value_t * __value_int(int number)
 {
 	stash_value_t *val;
 	
-	val = malloc(sizeof(*val));
+	val = calloc(1, sizeof(*val));
 	assert(val);
 	
 	val->valtype = STASH_VALTYPE_INT;
@@ -1298,7 +1298,7 @@ stash_value_t * stash_parse_value(const risp_data_t *data, const risp_length_t l
 	
 	assert(data && length > 0);
 	
-	value = malloc(sizeof(*value));
+	value = calloc(1, sizeof(*value));
 	assert(value);
 	
 	rr = risp_init(NULL);
