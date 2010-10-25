@@ -4,6 +4,7 @@ all: libstash.so.1.0.1
 
 ARGS=-g -Wall
 OBJS=libstash.o
+MANPATH=/usr/local/man
 
 libstash.o: libstash.c stash.h 
 	gcc -c -fPIC libstash.c  -o $@ $(ARGS)
@@ -34,14 +35,32 @@ uninstall: /usr/include/stash.h /usr/lib/libstash.so.1.0.1
 	rm /usr/lib/libstash.so.1.0.1
 	rm /usr/lib/libstash.so.1
 	rm /usr/lib/libstash.so
-	
 
-man-pages: libstash.3
-	cp libstash.3 $(MANPATH)/man3/
-	@gzip libstash.3
+libstash.3.gz: libstash.3
+	gzip -c $^ > $@
+
+stash_t.3.gz: stash_t.3
+	gzip -c $^ > $@
+
+stash_init.3.gz: stash_init.3
+	gzip -c $^ > $@
+
+stash_free.3.gz: stash_free.3
+	gzip -c $^ > $@
+
+stash_shutdown.3.gz: stash_shutdown.3
+	gzip -c $^ > $@
+
+man-pages: libstash.3.gz stash_t.3.gz stash_init.3.gz stash_free.3.gz stash_shutdown.3.gz
+	cp libstash.3.gz $(MANPATH)/man3/
+	cp stash_t.3.gz $(MANPATH)/man3/
+	cp stash_init.3.gz $(MANPATH)/man3/
+	cp stash_free.3.gz $(MANPATH)/man3/
+	cp stash_shutdown.3.gz $(MANPATH)/man3/
 	@echo "Man-pages Install complete."
 
 
 clean:
 	@-[ -e libstash.o ] && rm libstash.o
 	@-[ -e libstash.so* ] && rm libstash.so*
+	@-rm *.3.gz

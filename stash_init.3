@@ -1,38 +1,23 @@
 .\" man page for libstash
 .\" Contact webb.clint@gmail.com to correct errors or omissions. 
-.TH libstash 3 "23 October 2010" "0.07.00" "libstash - Library for accessing a Stash data storage service."
+.TH stash_init 3 "25 October 2010" "0.07.00" "libstash - Library for accessing a Stash data storage service."
 .SH NAME
-libstash - library for accessing and making requests of an stash data storage service.
+stash_init - Initialise the stash_t object.
 .SH SYNOPSIS
 #include <stash.h>
 .sp
 .B stash_t * stash_init(stash_t *stash);
 .br
-.B void stash_shutdown(stash_t *stash);
-.br
-.B void stash_free(stash_t *stash);
-.br
-.sp
-compile with the 
-.B -lstash -llinklist 
-option
 .SH DESCRIPTION
-.B libstash
-is a comprehensive library used to connect and interact with a stash data storage service.
-.SS Initialization 
 .B stash_init()
 is used to initialise a stash object, or create one if the parameter is NULL.  It will return a pointer to an initialised stash object, that will then be used for most stash operations.
-.SS Shutdown and Cleanup
-.B stash_shutdown()
-is used to shutdown all connections to the stash service, and 
 .B stash_free() 
 is used to free up all the resources allocated in the stash object, and if the stash object was created by stash_init(), it will free up the stash object too.
 .br
 .SH "SEE ALSO"
-.BR stash_init (3),
-.BR stash_shutdown (3),
 .BR stash_free (3),
-.BR stash_t (3)
+.BR stash_t (3),
+.BR libstash (3)
 .SH AUTHOR
 .nf
 Clint Webb (webb.clint@gmail.com)

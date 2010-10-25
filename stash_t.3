@@ -1,0 +1,23 @@
+.\" man page for libstash
+.\" Contact webb.clint@gmail.com to correct errors or omissions. 
+.TH stash_t 3 "23 October 2010" "0.07.00" "libstash - Library for accessing a Stash data storage service."
+.SH NAME
+stash_t - Object that is created and used by the stash library to connect and manipulate the stash database service.
+.SH DESCRIPTION
+.B stash_t
+is a structure that is used by most of the stash functions.  It should represent a connection to a logical stash system (either a single system, or a cluser).
+.SS Initialization 
+.B stash_init()
+is used to initialise a stash object, or create one if the parameter is NULL.  It will return a pointer to an initialised stash object, that will then be used for most stash operations.
+.SS Cleanup
+.B stash_free() 
+is used to free up all the resources allocated in the stash object, and if the stash object was created by stash_init(), it will free up the stash object too.
+.br
+.SH "SEE ALSO"
+.BR stash_init (3),
+.BR stash_free (3),
+.BR libstash (3)
+.SH AUTHOR
+.nf
+Clint Webb (webb.clint@gmail.com)
+.fi

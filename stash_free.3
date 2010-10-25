@@ -1,0 +1,24 @@
+.\" man page for libstash
+.\" Contact webb.clint@gmail.com to correct errors or omissions. 
+.TH stash_free 3 "23 October 2010" "0.07.00" "libstash - Library for accessing a Stash data storage service."
+.SH NAME
+stash_free - Free up the resources allocated by a stash object.
+.SH SYNOPSIS
+#include <stash.h>
+.sp
+.B void stash_free(stash_t *stash);
+.br
+.SH DESCRIPTION
+.B stash_free() 
+is used to free up all the resources allocated in the stash object, and if the stash object was created by 
+.B stash_init()
+, it will free up the stash object too.
+.br
+.SH "SEE ALSO"
+.BR stash_init (3),
+.BR stash_free (3),
+.BR stash_t (3)
+.SH AUTHOR
+.nf
+Clint Webb (webb.clint@gmail.com)
+.fi
