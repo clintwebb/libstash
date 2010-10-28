@@ -1,0 +1,24 @@
+.\" man page for libstash
+.\" Contact webb.clint@gmail.com to correct errors or omissions. 
+.TH stash_query_free 3 "26 October 2010" "0.07.00" "libstash - Library for accessing a Stash data storage service."
+.SH NAME
+stash_query_free - Free the resources used by the query.
+.SH SYNOPSIS
+#include <stash.h>
+.sp
+.B void stash_query_free(stash_query_t *query);
+.br
+.SH DESCRIPTION
+.B stash_query_free() 
+is used to free up all the resources allocated in the query object that was created by
+.B stash_query_new()
+, however, it does not clear up any reply that was generated from it.
+.br
+.SH "SEE ALSO"
+.BR stash_query_t (3),
+.BR stash_query_new (3),
+.BR libstash (3).
+.SH AUTHOR
+.nf
+Clint Webb (webb.clint@gmail.com)
+.fi

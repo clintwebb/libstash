@@ -1,0 +1,28 @@
+.\" man page for libstash
+.\" Contact webb.clint@gmail.com to correct errors or omissions. 
+.TH stash_query_new 3 "26 October 2010" "0.07.00" "libstash - Library for accessing a Stash data storage service."
+.SH NAME
+stash_query_new - Initialise the stash_t query object.
+.SH SYNOPSIS
+#include <stash.h>
+.sp
+.B stash_query_t * stash_query_new(stash_nsid_t nsid, stash_tableid_t tid);
+.br
+.SH DESCRIPTION
+.B stash_query_new()
+is used to initialise a stash query object.  the namespace ID and the table ID are required parameters and the query is tied to that table.  You cannot use the same query for multiple tables.
+.sp
+.B stash_query_free() 
+is used to free up all the resources allocated in the query object, however, it does not clear up any reply that was generated from it.
+.br
+.SH "SEE ALSO"
+.BR stash_query_t (3),
+.BR stash_query_free (3),
+.BR stash_query_condition (3),
+.BR stash_query_limit (3), 
+.BR stash_query_execute (3),
+.BR libstash (3).
+.SH AUTHOR
+.nf
+Clint Webb (webb.clint@gmail.com)
+.fi

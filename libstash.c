@@ -1899,25 +1899,72 @@ static void build_condition(expbuf_t *buffer, stash_cond_t *condition)
 	assert(buf == NULL);
 }
 
-stash_reply_t * stash_query(stash_t *stash, stash_nsid_t nsid, stash_tableid_t tid, int limit, stash_cond_t *condition)
+
+// create a query object that will be used to build a query and then execute it.  
+// Object will need to be free'd with stash_query_free().
+stash_query_t * stash_query_new(stash_nsid_t nsid, stash_tableid_t tid)
+{
+	stash_query_t *query;
+	
+	assert(nsid > 0 && tid > 0);
+	query = calloc(1, sizeof(*query));
+	assert(query);
+	
+	query->nsid = nsid;
+	query->tid = tid;
+	assert(query->limit == 0);
+	assert(query->condition == NULL);
+	
+	return(query);
+}
+
+// free the query object that was created with stash_query_new().
+// 
+// NOTE: Freeing the query does not free or cleanup any conditions that were 
+//       supplied.  Conditions must be freed manually.
+void stash_query_free(stash_query_t *query)
+{
+	assert(query);
+	
+	// eventually there might be things inside the object that need to be freed as well, but not yet.
+	
+	free(query);
+}
+
+// set the condition for the query.  If an existing condition is there, then 
+// it is merely replaced.  No cleanup of the condition is attempted.
+void stash_query_condition(stash_query_t *query, stash_cond_t *condition)
+{
+	assert(query && condition);
+	query->condition = condition;
+}
+
+void stash_query_limit(stash_query_t *query, int limit)
+{
+	assert(query && limit >= 0);
+	query->limit = limit;
+}
+
+stash_reply_t * stash_query_execute(stash_t *stash, stash_query_t *query)
 {
 	stash_reply_t *reply;
 	expbuf_t *buf_cond = NULL;
 	expbuf_t *buf_query = NULL;
 	
-	assert(stash && nsid > 0 && tid > 0 && limit >= 0);
-
+	assert(stash && query);
+	assert(query->nsid > 0 && query->tid > 0 && query->limit >= 0);
+	
 	buf_query = expbuf_init(NULL, 0);
 	
 	// build the rest of the message.
-	rispbuf_addInt(buf_query, STASH_CMD_NAMESPACE_ID, nsid);
-	rispbuf_addInt(buf_query, STASH_CMD_TABLE_ID, tid);
+	rispbuf_addInt(buf_query, STASH_CMD_NAMESPACE_ID, query->nsid);
+	rispbuf_addInt(buf_query, STASH_CMD_TABLE_ID, query->tid);
 	
-	if (condition) {
+	if (query->condition) {
 		buf_cond = expbuf_init(NULL, 0);
-
+		
 		// build the condition string.
-		build_condition(buf_cond, condition);
+		build_condition(buf_cond, query->condition);
 		assert(BUF_LENGTH(buf_cond) > 0);
 		
 		// add the condition buffer to the main one.
@@ -1934,6 +1981,31 @@ stash_reply_t * stash_query(stash_t *stash, stash_nsid_t nsid, stash_tableid_t t
 	assert(buf_query == NULL);
 	
 	// return the reply;
+	return(reply);
+}
+
+
+// This function is retained for compatibility reasons.  It builds a query 
+// based on the limited parameters, and executes it.  It returns the reply.
+stash_reply_t * stash_query(stash_t *stash, stash_nsid_t nsid, stash_tableid_t tid, int limit, stash_cond_t *condition)
+{
+	stash_reply_t *reply;
+	stash_query_t *query;
+	
+	assert(stash && nsid > 0 && tid > 0 && limit >= 0);
+	query = stash_query_new(nsid, tid);
+	assert(query);
+	
+	stash_query_limit(query, limit);
+	if (condition) {
+		stash_query_condition(query, condition);
+	}
+	
+	reply = stash_query_execute(stash, query);
+	assert(reply);
+	
+	stash_query_free(query);
+	
 	return(reply);
 }
 

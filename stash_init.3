@@ -14,6 +14,36 @@ is used to initialise a stash object, or create one if the parameter is NULL.  I
 .B stash_free() 
 is used to free up all the resources allocated in the stash object, and if the stash object was created by stash_init(), it will free up the stash object too.
 .br
+.SH EXAMPLE
+.SS "Letting stash create itself"
+.nf
+#include <stash.h>
+
+int main(void) {
+  stash_t *stash;
+
+  stash = stash_init(NULL);
+  // do something with stash... 
+  stash_free(stash);
+
+  return 0;
+}
+.fi
+.SS "Initializing an existing object"
+.nf
+#include <stash.h>
+
+int main(void) {
+  stash_t stashobj;
+
+  stash_init(&stashobj);
+  // do something with stash... 
+  stash_free(&stashobj);
+
+  return 0;
+}
+.fi
+
 .SH "SEE ALSO"
 .BR stash_free (3),
 .BR stash_t (3),

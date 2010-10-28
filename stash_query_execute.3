@@ -1,0 +1,89 @@
+.\" man page for libstash
+.\" Contact webb.clint@gmail.com to correct errors or omissions. 
+.TH stash_query_execute 3 "28 October 2010" "0.07.00" "libstash - Library for accessing a Stash data storage service."
+.SH NAME
+stash_query_execute - Execute a query that has been generated.
+.SH SYNOPSIS
+#include <stash.h>
+.sp
+stash_reply_t * 
+.B stash_query_execute
+(stash_t *stash, stash_query_t *query);
+.br
+.SH DESCRIPTION
+.B stash_query_execute()
+is used to execute a query that has been generated.  It will always return a pointer to a 
+.B stash_reply_t
+that will need to be returned with 
+.B stash_return_reply().
+
+.sp
+.SH EXAMPLE
+.nf
+void process(stash_t *stash, stash_nsid_t nsid, stash_tableid_t tid)
+{
+    stash_reply_t *reply;
+    stash_keyid_t key_username, key_count, key_fullname;
+    stash_cond_t *cond;
+    stash_query_t *query;
+
+    // get the keyID's of the keys we will be using.
+    key_username  = stash_get_key_id(stash, nsid, tid, "username");
+    key_count     = stash_get_key_id(stash, nsid, tid, "count");
+    key_fullname  = stash_get_key_id(stash, nsid, tid, "fullname");
+
+    // this condition will return all rows that have both a 
+    // username of 'freddy0077' and have a key called 'count' 
+    // with a value greater than 5.
+    cond = __cond_and(
+               __cond_key_equals(key_username, __value_str("freddy0077")),
+               __cond_key_gt(key_count, __value_int(5))
+           );
+
+    // create a new query object.
+    query = stash_query_new(nsid, tid);
+
+    // set a limit, we only want (or expect 1 row)
+    stash_query_limit(query, 1);
+
+    // set the condition for the query.
+    stash_query_condition(query, cond);
+
+    // execute the query and print the results.
+    reply = stash_query_execute(stash, query);
+    if (reply->resultcode != STASH_ERR_OK) {
+        printf("Unable to query row, %d:'%s'.\n", 
+            reply->resultcode, stash_err_text(reply->resultcode));
+    }
+    else {
+        if (stash_nextrow(reply)) {
+
+            // display the fullname from the record.
+            printf("fullname:'%s'\n", stash_getstr(reply, key_fullname);
+        }
+        else {
+            printf("No records returned\n");
+        }
+    }
+
+    // when we are done we need to return the reply object, 
+    // free the query, and free the condition.
+    stash_return_reply(reply);
+    stash_query_free(query);
+    stash_cond_free(cond);
+}
+.fi
+
+
+.SH "SEE ALSO"
+.BR stash_query_t (3),
+.BR stash_query_limit (3), 
+.BR stash_query_condition (3),
+.BR stash_reply_t (3),
+.BR stash_return_reply (3),
+.BR libstash (3),
+.BR stash_cond_t (3).
+.SH AUTHOR
+.nf
+Clint Webb (webb.clint@gmail.com)
+.fi

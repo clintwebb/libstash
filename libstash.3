@@ -6,11 +6,41 @@ libstash - library for accessing and making requests of an stash data storage se
 .SH SYNOPSIS
 #include <stash.h>
 .sp
-.B stash_t * stash_init(stash_t *stash);
+// initialisation and cleanup
 .br
-.B void stash_shutdown(stash_t *stash);
+stash_t * 
+.B stash_init
+(stash_t *stash);
 .br
-.B void stash_free(stash_t *stash);
+void 
+.B stash_shutdown
+(stash_t *stash);
+.br
+void 
+.B stash_free
+(stash_t *stash);
+.sp
+// queries
+.br
+stash_query_t * 
+.B stash_query_new
+(stash_nsid_t nsid, stash_tableid_t tid);
+.br
+void 
+.B stash_query_free
+(stash_query_t *query);
+.br
+void 
+.B stash_query_condition
+(stash_query_t *query, stash_cond_t *condition);
+.br
+void 
+.B stash_query_limit
+(stash_query_t *query, int limit);
+.br
+stash_reply_t * 
+.B stash_query_execute
+(stash_t *stash, stash_query_t *query);
 .br
 .sp
 compile with the 
@@ -22,17 +52,40 @@ is a comprehensive library used to connect and interact with a stash data storag
 .SS Initialization 
 .B stash_init()
 is used to initialise a stash object, or create one if the parameter is NULL.  It will return a pointer to an initialised stash object, that will then be used for most stash operations.
-.SS Shutdown and Cleanup
+.SS "Shutdown and Cleanup"
 .B stash_shutdown()
 is used to shutdown all connections to the stash service, and 
 .B stash_free() 
 is used to free up all the resources allocated in the stash object, and if the stash object was created by stash_init(), it will free up the stash object too.
+.SS "Generating Queries"
+.B stash_query_new()
+is used to create a new query object, and
+.B stash_query_free()
+is used to destroy it.
+.B stash_query_condition()
+is used to set a condition on the query, along with
+.B stash_query_limit()
+setting a limit on the number of rows to return.
+.sp
+.B stash_query_execute()
+executes the query and will return a reply structure.
+.sp
+
 .br
 .SH "SEE ALSO"
+.BR stash_t (3),
+.BR stash_query_t (3).
+.br
 .BR stash_init (3),
 .BR stash_shutdown (3),
-.BR stash_free (3),
-.BR stash_t (3)
+.BR stash_free (3).
+.br
+.BR stash_query_new (3),
+.BR stash_query_free (3), 
+.BR stash_query_condition (3),
+.BR stash_query_limit (3), 
+.BR stash_query_execute (3).
+.br
 .SH AUTHOR
 .nf
 Clint Webb (webb.clint@gmail.com)

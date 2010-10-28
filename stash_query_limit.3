@@ -1,0 +1,25 @@
+.\" man page for libstash
+.\" Contact webb.clint@gmail.com to correct errors or omissions. 
+.TH stash_query_limit 3 "26 October 2010" "0.07.00" "libstash - Library for accessing a Stash data storage service."
+.SH NAME
+stash_query_limit - Set a limit on the number of rows to receive.
+.SH SYNOPSIS
+#include <stash.h>
+.sp
+.B void stash_query_limit(stash_query_t *query, int limit);
+.br
+.SH DESCRIPTION
+.B stash_query_limit()
+is used to set a limit on the number of rows to receive when the query is executed.
+.sp
+.SH "SEE ALSO"
+.BR stash_query_t (3),
+.BR stash_query_new (3),
+.BR stash_query_free (3),
+.BR stash_query_condition (3), 
+.BR stash_query_execute (3),
+.BR libstash (3).
+.SH AUTHOR
+.nf
+Clint Webb (webb.clint@gmail.com)
+.fi

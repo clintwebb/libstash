@@ -51,12 +51,27 @@ stash_free.3.gz: stash_free.3
 stash_shutdown.3.gz: stash_shutdown.3
 	gzip -c $^ > $@
 
-man-pages: libstash.3.gz stash_t.3.gz stash_init.3.gz stash_free.3.gz stash_shutdown.3.gz
-	cp libstash.3.gz $(MANPATH)/man3/
-	cp stash_t.3.gz $(MANPATH)/man3/
-	cp stash_init.3.gz $(MANPATH)/man3/
-	cp stash_free.3.gz $(MANPATH)/man3/
-	cp stash_shutdown.3.gz $(MANPATH)/man3/
+stash_query_t.3.gz: stash_query_t.3
+	gzip -c $^ > $@
+
+stash_query_new.3.gz: stash_query_new.3
+	gzip -c $^ > $@
+
+stash_query_free.3.gz: stash_query_free.3
+	gzip -c $^ > $@
+
+stash_query_condition.3.gz: stash_query_condition.3
+	gzip -c $^ > $@
+
+stash_query_limit.3.gz: stash_query_limit.3
+	gzip -c $^ > $@
+
+stash_query_execute.3.gz: stash_query_execute.3
+	gzip -c $^ > $@
+
+
+man-pages: libstash.3.gz stash_t.3.gz stash_init.3.gz stash_free.3.gz stash_shutdown.3.gz stash_query_t.3.gz stash_query_new.3.gz stash_query_free.3.gz stash_query_condition.3.gz stash_query_limit.3.gz stash_query_execute.3.gz
+	for i in $^; do cp -v $$i $(MANPATH)/man3/; done
 	@echo "Man-pages Install complete."
 
 
