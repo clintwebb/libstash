@@ -150,6 +150,7 @@ static void cmdReplyRow(stash_reply_t *reply, const risp_length_t length, const 
 	assert(reply->rows);
 	ll_push_tail(reply->rows, row);
 	
+#ifndef NDEBUG
 	// check for any values we didn't handle.
 	for (cnt=0; cnt<256; cnt++) {
 		if (reply->stash->risp_row->commands[cnt].handler == NULL) {
@@ -158,6 +159,7 @@ static void cmdReplyRow(stash_reply_t *reply, const risp_length_t length, const 
 			}
 		}
 	}
+#endif
 }
 
 
@@ -214,6 +216,7 @@ static void cmdRowAttribute(replyrow_t *row, const risp_length_t length, const r
 	ll_push_tail(row->attrlist, attr);
 	
 	// check for any values we didn't handle.
+#ifndef NDEBUG
 	for (cnt=0; cnt<256; cnt++) {
 		if (row->reply->stash->risp_attr->commands[cnt].handler == NULL) {
 			if (row->reply->stash->risp_attr->commands[cnt].set) {
@@ -221,6 +224,7 @@ static void cmdRowAttribute(replyrow_t *row, const risp_length_t length, const r
 			}
 		}
 	}
+#endif
 }
 
 
@@ -771,6 +775,7 @@ static stash_reply_t * parsereply(stash_t *stash, risp_t *risp)
 		processed = risp_process(stash->risp_reply, reply, datalen, data);
 		assert(processed == datalen);
 		
+#ifndef NDEBUG
 		// check for unprocessed params.
 		for (cnt=0; cnt<256; cnt++) {
 			if (stash->risp_reply->commands[cnt].handler == NULL) {
@@ -779,6 +784,7 @@ static stash_reply_t * parsereply(stash_t *stash, risp_t *risp)
 				}
 			}
 		}
+#endif
 	}
 	else {
 		// we've got something back that wasn't expected.
