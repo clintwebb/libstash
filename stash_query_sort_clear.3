@@ -1,0 +1,26 @@
+.\" man page for libstash
+.\" Contact webb.clint@gmail.com to correct errors or omissions. 
+.TH stash_query_sort_clear 3 "21 November 2010" "0.07.00" "libstash - Library for accessing a Stash data storage service."
+.SH NAME
+stash_query_sort_clear - Clear the sorting criteria on a query.
+.SH SYNOPSIS
+#include <stash.h>
+.sp
+.B void stash_query_sort_clear(stash_query_t *query);
+.br
+.SH DESCRIPTION
+.B stash_query_sort_clear()
+is used to clear sortation criteria on a query.  
+.sp
+.SH "SEE ALSO"
+.BR stash_query_t (3),
+.BR stash_query_new (3),
+.BR stash_query_limit (3),
+.BR stash_query_condition (3), 
+.BR stash_query_sort (3), 
+.BR stash_query_execute (3),
+.BR libstash (3).
+.SH AUTHOR
+.nf
+Clint Webb (webb.clint@gmail.com)
+.fi

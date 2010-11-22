@@ -1,0 +1,22 @@
+.\" man page for libstash
+.\" Contact webb.clint@gmail.com to correct errors or omissions. 
+.TH stash_sortentry_free 3 "16 November 2010" "0.07.00" "libstash - Library for accessing a Stash data storage service."
+.SH NAME
+stash_sortentry_free - Free a sortentry object (and any nested entries).
+.SH SYNOPSIS
+#include <stash.h>
+.sp
+.B void stash_sortentry_free(stash_sortentry_t *entry);
+.br
+.SH DESCRIPTION
+.B stash_sortentry_free() 
+is used to free up the sortentry object and the rest of them in the chain.
+.sp
+.SH "SEE ALSO"
+.BR stash_sortentry_t (3),
+.BR stash_sortentry (3),
+.BR libstash (3).
+.SH AUTHOR
+.nf
+Clint Webb (webb.clint@gmail.com)
+.fi

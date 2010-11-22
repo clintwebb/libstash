@@ -1,0 +1,36 @@
+.\" man page for libstash
+.\" Contact webb.clint@gmail.com to correct errors or omissions. 
+.TH stash_sortentry 3 "16 November 2010" "0.07.00" "libstash - Library for accessing a Stash data storage service."
+.SH NAME
+stash_sortentry - Initialise and return a stash_sortentry_t object.
+.SH SYNOPSIS
+#include <stash.h>
+.sp
+.B stash_sortentry_t * stash_sortentry(stash_keyid_t kid, int desc, stash_sortentry_t *next);
+.br
+.SH DESCRIPTION
+.B stash_sortentry()
+is used to initialise and return a stash sortentry object.  Sort criteria can be nested.  
+.br
+For example:
+.nf
+    stash_sortentry_t *entry;
+    entry = stash_sortentry(key_name, 0, stash_sortentry(key_age, 0, NULL));
+    ...
+    stash_sortentry_free(entry);
+.fi
+.sp
+.B stash_sortentry_free() 
+is used to free up the sortentry object and the rest of them in the chain.
+.sp
+.B stash_sort(reply, sortentry)
+can be used to sort (or resort) a replyset.  
+.SH "SEE ALSO"
+.BR stash_sortentry_t (3),
+.BR stash_sortentry_free (3),
+.BR stash_sort (3),
+.BR libstash (3).
+.SH AUTHOR
+.nf
+Clint Webb (webb.clint@gmail.com)
+.fi

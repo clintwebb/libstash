@@ -1,0 +1,33 @@
+.\" man page for libstash
+.\" Contact webb.clint@gmail.com to correct errors or omissions. 
+.TH stash_sort 3 "16 November 2010" "0.07.00" "libstash - Library for accessing a Stash data storage service."
+.SH NAME
+stash_sort - Sort (or re-sort) a replyset.
+.SH SYNOPSIS
+#include <stash.h>
+.sp
+.B void stash_sort(stash_reply_t *reply, stash_sortentry_t *sort);
+.br
+.SH DESCRIPTION
+.B stash_sort()
+is used to sort a reply from a query.  
+.br
+For example:
+.nf
+    stash_sortentry_t *entry;
+    entry = stash_sortentry(key_name, 0, stash_sortentry(key_age, 0, NULL));
+    stash_sort(reply, entry);
+    stash_sortentry_free(entry);
+.fi
+.sp
+.B stash_sortentry_free() 
+is used to free up the sortentry object and the rest of them in the chain.  stash_sort does not free any sort resources.
+.sp
+.SH "SEE ALSO"
+.BR stash_sortentry (3),
+.BR stash_query_execute (3),
+.BR libstash (3).
+.SH AUTHOR
+.nf
+Clint Webb (webb.clint@gmail.com)
+.fi

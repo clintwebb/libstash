@@ -38,6 +38,14 @@ void
 .B stash_query_limit
 (stash_query_t *query, int limit);
 .br
+void
+.B stash_query_sort
+(stash_query_t *query, stash_keyid_t keyid, int desc);
+.br
+void 
+.B stash_query_sort_clear
+(stash_query_t *query);
+.br
 stash_reply_t * 
 .B stash_query_execute
 (stash_t *stash, stash_query_t *query);
@@ -66,6 +74,10 @@ is used to destroy it.
 is used to set a condition on the query, along with
 .B stash_query_limit()
 setting a limit on the number of rows to return.
+.B stash_query_sort()
+sets sortation criteria on the query.  If a limit is set, then sorting is done on the server, otherwise sorting is done by the client 
+when all data has been received.  There may be a need to clear a sort criteria on a query, 
+.B stash_query_sort_clear() will clear (and free) the sort criteria of the query.
 .sp
 .B stash_query_execute()
 executes the query and will return a reply structure.
@@ -84,6 +96,8 @@ executes the query and will return a reply structure.
 .BR stash_query_free (3), 
 .BR stash_query_condition (3),
 .BR stash_query_limit (3), 
+.BR stash_query_sort (3),
+.BR stash_query_sort_clear (3),
 .BR stash_query_execute (3).
 .br
 .SH AUTHOR

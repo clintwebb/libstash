@@ -66,11 +66,32 @@ stash_query_condition.3.gz: stash_query_condition.3
 stash_query_limit.3.gz: stash_query_limit.3
 	gzip -c $^ > $@
 
+stash_query_sort.3.gz: stash_query_sort.3
+	gzip -c $^ > $@
+
+stash_query_sort_clear.3.gz: stash_query_sort_clear.3
+	gzip -c $^ > $@
+
 stash_query_execute.3.gz: stash_query_execute.3
 	gzip -c $^ > $@
 
+stash_sortentry_t.3.gz: stash_sortentry_t.3
+	gzip -c $^ > $@
 
-man-pages: libstash.3.gz stash_t.3.gz stash_init.3.gz stash_free.3.gz stash_shutdown.3.gz stash_query_t.3.gz stash_query_new.3.gz stash_query_free.3.gz stash_query_condition.3.gz stash_query_limit.3.gz stash_query_execute.3.gz
+stash_sortentry.3.gz: stash_sortentry.3
+	gzip -c $^ > $@
+
+stash_sortentry_free.3.gz: stash_sortentry_free.3
+	gzip -c $^ > $@
+
+stash_sort.3.gz: stash_sort.3
+	gzip -c $^ > $@
+
+stash_sort_onkey.3.gz: stash_sort_onkey.3
+	gzip -c $^ > $@
+
+
+man-pages: libstash.3.gz stash_t.3.gz stash_init.3.gz stash_free.3.gz stash_shutdown.3.gz stash_query_t.3.gz stash_query_new.3.gz stash_query_free.3.gz stash_query_condition.3.gz stash_query_limit.3.gz stash_query_execute.3.gz stash_query_sort.3.gz stash_sortentry_t.3.gz stash_sortentry.3.gz stash_sortentry_free.3.gz stash_sort.3.gz stash_sort_onkey.3.gz stash_query_sort_clear.3.gz
 	for i in $^; do cp -v $$i $(MANPATH)/man3/; done
 	@echo "Man-pages Install complete."
 

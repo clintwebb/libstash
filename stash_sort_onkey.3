@@ -1,0 +1,22 @@
+.\" man page for libstash
+.\" Contact webb.clint@gmail.com to correct errors or omissions. 
+.TH stash_sort_onkey 3 "16 November 2010" "0.07.00" "libstash - Library for accessing a Stash data storage service."
+.SH NAME
+stash_sort_onkey - Simple sort wrapper to sort ascending on a single keyID.
+.SH SYNOPSIS
+#include <stash.h>
+.sp
+.B void stash_sort_onkey(stash_reply_t *reply, stash_keyid_t key);
+.br
+.SH DESCRIPTION
+.B stash_sort_onkey()
+is used to sort a reply from a query on a single key.  Used for simple sorts so that sort objects dont need to be created.  
+.br
+.SH "SEE ALSO"
+.BR stash_sortentry (3),
+.BR stash_query_execute (3),
+.BR libstash (3).
+.SH AUTHOR
+.nf
+Clint Webb (webb.clint@gmail.com)
+.fi

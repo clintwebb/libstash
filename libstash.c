@@ -31,8 +31,8 @@
 #endif
 
 
-// when sorting the replies from a query, we use qsort which will not know which key to sort on.
-static stash_keyid_t stash_sortkey = 0;
+// when sorting the replies from a query, we use qsort which will not know which keys to sort on.
+static stash_sortentry_t * __sortentry = NULL;
 
 
 typedef struct {
@@ -1905,6 +1905,195 @@ static void build_condition(expbuf_t *buffer, stash_cond_t *condition)
 	assert(buf == NULL);
 }
 
+// returns a sortentry object.
+stash_sortentry_t * stash_sortentry(stash_keyid_t kid, int desc, stash_sortentry_t *next)
+{
+	stash_sortentry_t *entry;
+	
+	assert(kid > 0);
+	assert(desc == 0 || desc == 1);
+	
+	entry = calloc(1, sizeof(*entry));
+	assert(entry);
+	entry->kid = kid;
+	entry->desc = desc;
+	entry->next = next;
+	
+	return(entry);
+}
+
+// free the sortentry object, and any further objects in the list.  Non-recursive.
+void stash_sortentry_free(stash_sortentry_t *entry)
+{
+	stash_sortentry_t *next;
+	stash_sortentry_t *curr;
+	
+	assert(entry);
+	
+	// go through the list of sorts, and free each entry.  non-recursive.
+	next = entry;
+	while (next != NULL) {
+		curr = next;
+		next = curr->next;
+		
+		// there is nothing to free in the struct itself 
+		free(curr);
+	}
+}
+
+
+static stash_value_t * getvalue(const replyrow_t *row, stash_keyid_t key)
+{
+	stash_value_t *val = NULL;
+	attr_t *tmp;
+	
+	
+	assert(row && key > 0);
+	assert(row->identifier == 0x1234);
+	assert(row->attrlist);
+	assert(row->attrlist->loop == NULL);
+	ll_start(row->attrlist);
+	while (val == NULL && (tmp = ll_next(row->attrlist))) {
+		if (tmp->keyid == key) {
+			assert(tmp->value);
+			val = tmp->value;
+		}
+	}
+	ll_finish(row->attrlist);
+	
+	return(val);
+}
+
+// a and b point to elements in the list... and is not the pointer that the element has in it.  Therefore, it needs to be dereferenced a bit.
+static int sortfn(const void *a, const void *b) 
+{
+	stash_value_t *va, *vb;
+	stash_sortentry_t *curr;
+	int result = 0;
+	
+	replyrow_t * const *ra = a;
+	replyrow_t * const *rb = b;
+	
+	assert(a && b);
+	assert(__sortentry != NULL);
+	
+	// 	printf("a=%lu, b=%lu\n", (*ra), (*rb));
+	
+	assert((*ra)->identifier == 0x1234);
+	assert((*rb)->identifier == 0x1234);
+
+	curr = __sortentry;
+	while (curr != NULL) {
+
+		assert(curr->kid > 0);
+		
+		// if we are sorting descendingly, we need to reverse the order we are looking.
+		if (curr->desc == 0) {
+			va = getvalue((*ra), curr->kid);
+			vb = getvalue((*rb), curr->kid);
+		}
+		else {
+			vb = getvalue((*ra), curr->kid);
+			va = getvalue((*rb), curr->kid);
+		}
+		if (va == NULL && vb == NULL) { return(0); }
+		else if (va && vb == NULL) { return(1); }
+		else if (va == NULL && vb) { return(-1); }
+		else {
+			assert(va && vb);
+			
+			if (va->valtype == STASH_VALTYPE_INT && vb->valtype == STASH_VALTYPE_INT) {
+				result = va->value.number - vb->value.number;
+			}
+			else if (va->valtype == STASH_VALTYPE_STR && vb->valtype == STASH_VALTYPE_STR) {
+				result = strncmp(va->value.str, vb->value.str, vb->datalen < va->datalen ? vb->datalen : va->datalen);
+			}
+			else {
+				// need to compare other type combinations.
+				assert(0);
+			}
+
+			
+			if (result == 0) { curr = curr->next; }
+			else { return(result); }
+		}
+	}
+	
+	return(0);
+}
+
+
+// this function will take the reply array, and sort it based on the keyID supplied.  If rows do not contain this key, then they are moved to the bottom.
+void stash_sort(stash_reply_t *reply, stash_sortentry_t *sort)
+{
+	int total, i;
+	replyrow_t **list;
+	
+	assert(reply && sort);
+	
+	if (reply->rows) {
+		total = ll_count(reply->rows);
+		assert(total > 0);
+		
+		// create an array (of pointers) big enough to hold all the rows.
+		list = calloc(total, sizeof(replyrow_t *));
+		assert(list);
+		
+		// pull out the rows from the list, into the array.
+		for (i=0; i<total; i++) {
+			assert(list[i] == NULL);
+			list[i] = ll_pop_head(reply->rows);
+			assert(list[i]);
+			assert(list[i]->identifier == 0x1234);
+		}
+		
+		// the original list should now be empty.
+		assert(ll_count(reply->rows) == 0);
+		
+		// sort the rows
+		assert(__sortentry == NULL);
+		__sortentry = sort;
+		
+		qsort(list, total, sizeof(replyrow_t *), sortfn);
+		assert(__sortentry == sort);
+		__sortentry = NULL;
+		assert(__sortentry == NULL);
+		
+		// put the rows back into the list.
+		for (i=0; i<total; i++) {
+			assert(list[i]);
+			
+			// reset the 'done' marker because it has been sorted, and we start iterating through the list again.
+			list[i]->done = 0;
+			
+			ll_push_tail(reply->rows, list[i]);
+		}
+		
+		// free the array.
+		free(list);
+		
+		// reset the 'current row' to indicate that it should start at the begining.
+		reply->curr_row = -1;
+	}
+	else {
+		assert(reply->curr_row == 0);
+	}
+}
+
+
+void stash_sort_onkey(stash_reply_t *reply, stash_keyid_t key)
+{
+	stash_sortentry_t *entry;
+	
+	assert(reply && key > 0);
+	entry = stash_sortentry(key, 0, NULL);
+	stash_sort(reply, entry);
+	stash_sortentry_free(entry);
+}
+
+
+
+
 
 // create a query object that will be used to build a query and then execute it.  
 // Object will need to be free'd with stash_query_free().
@@ -1920,9 +2109,22 @@ stash_query_t * stash_query_new(stash_nsid_t nsid, stash_tableid_t tid)
 	query->tid = tid;
 	assert(query->limit == 0);
 	assert(query->condition == NULL);
+	assert(query->sort == NULL);
 	
 	return(query);
 }
+
+void stash_query_sort_clear(stash_query_t *query)
+{
+	assert(query);
+	
+	// if we have sort entries, then we need to free them.
+	if (query->sort) {
+		stash_sortentry_free(query->sort);
+		query->sort = NULL;
+	}
+}
+
 
 // free the query object that was created with stash_query_new().
 // 
@@ -1931,9 +2133,7 @@ stash_query_t * stash_query_new(stash_nsid_t nsid, stash_tableid_t tid)
 void stash_query_free(stash_query_t *query)
 {
 	assert(query);
-	
-	// eventually there might be things inside the object that need to be freed as well, but not yet.
-	
+	stash_query_sort_clear(query);
 	free(query);
 }
 
@@ -1951,11 +2151,81 @@ void stash_query_limit(stash_query_t *query, int limit)
 	query->limit = limit;
 }
 
+// add a sort entry to the query.  If there are sort entries already existing, then this is added to the end.
+void stash_query_sort(stash_query_t *query, stash_keyid_t kid, int desc)
+{
+	stash_sortentry_t *curr, *entry;
+	
+	assert(query && kid > 0);
+	assert(desc == 0 || desc == 1);
+	
+	curr = calloc(1, sizeof(*curr));
+	curr->kid = kid;
+	curr->desc = desc;
+	assert(curr->next == NULL);
+	
+	if (query->sort) {
+		// we have an existing sort entry, so we need to go through the list to find the end, and add to that.
+		entry = query->sort;
+		while (entry->next) {
+			entry = entry->next;
+		}
+		assert(entry);
+		assert(entry->next == NULL);
+		entry->next = curr;
+	}
+	else {
+		// none exist so far, so add the first.
+		query->sort = curr;
+	}
+}
+
+
+
+
+
+// internal function that will take a sort structure and create RISP commands 
+// to send over the network.
+static void build_sort(expbuf_t *buf, stash_sortentry_t *sort)
+{
+	stash_sortentry_t *curr = NULL;
+	expbuf_t *entry;
+	
+	assert(buf && sort);
+
+	entry = expbuf_init(NULL, 32);
+	assert(entry);
+	
+	curr = sort;
+	while (curr) {
+		assert(curr->kid > 0);
+		assert(curr->desc == 0 || curr->desc == 1);
+		
+		assert(BUF_LENGTH(entry) == 0);
+		rispbuf_addInt(entry, STASH_CMD_KEY_ID, curr->kid);
+		if (curr->desc == 0) { rispbuf_addCmd(entry, STASH_CMD_SORTASC); }
+		else 				 { rispbuf_addCmd(entry, STASH_CMD_SORTDESC); }
+		
+		assert(BUF_LENGTH(entry) > 0);
+		
+		rispbuf_addBuffer(buf, STASH_CMD_SORTENTRY, entry);
+		expbuf_clear(entry);
+		
+		curr = curr->next;
+	}
+	
+	entry = expbuf_free(entry);
+	assert(entry == NULL);
+}
+
+
 stash_reply_t * stash_query_execute(stash_t *stash, stash_query_t *query)
 {
 	stash_reply_t *reply;
 	expbuf_t *buf_cond = NULL;
+	expbuf_t *buf_sort = NULL;
 	expbuf_t *buf_query = NULL;
+	
 	
 	assert(stash && query);
 	assert(query->nsid > 0 && query->tid > 0 && query->limit >= 0);
@@ -1980,11 +2250,44 @@ stash_reply_t * stash_query_execute(stash_t *stash, stash_query_t *query)
 		assert(buf_cond == NULL);
 	}
 	
+	if (query->limit > 0) {
+	
+		rispbuf_addInt(buf_query, STASH_CMD_LIMIT, query->limit);
+		
+		if (query->sort) {
+			// we have sorting criteria and a limit set, so we need to pass the sort details on to the server, so that it can get sorted there.
+			assert(buf_sort == NULL);
+			buf_sort = expbuf_init(NULL, 64);
+			assert(buf_sort);
+			
+			// build the sort string.
+			build_sort(buf_sort, query->sort);
+			assert(BUF_LENGTH(buf_sort) > 0);
+			
+			// add the condition buffer to the main one.
+			rispbuf_addBuffer(buf_query, STASH_CMD_SORT, buf_sort);
+			
+			buf_sort = expbuf_free(buf_sort);
+			assert(buf_sort == NULL);
+		}
+	}
+	
 	// send it.
 	reply = send_request(stash, STASH_CMD_QUERY, buf_query);
-	
+	assert(reply);
+
 	buf_query = expbuf_free(buf_query);
 	assert(buf_query == NULL);
+	
+	
+	if (query->sort && query->limit <= 0) {
+		// we have a sort, but no limit, so that means we can do the sort on 
+		// the client side, and did not send sorting information to the server.  
+		// Therefore, we have to do the sort here, now that we have all the data.
+		
+		stash_sort(reply, query->sort);
+	}
+	
 	
 	// return the reply;
 	return(reply);
@@ -2338,68 +2641,8 @@ stash_reply_t * stash_delete(stash_t *stash, stash_nsid_t nsid, stash_tableid_t 
 	return(reply);
 }
 
-static stash_value_t * getvalue(const replyrow_t *row, stash_keyid_t key)
-{
-	stash_value_t *val = NULL;
-	attr_t *tmp;
-	
-	
-	assert(row && key > 0);
-	assert(row->identifier == 0x1234);
-	assert(row->attrlist);
-	assert(row->attrlist->loop == NULL);
-	ll_start(row->attrlist);
-	while (val == NULL && (tmp = ll_next(row->attrlist))) {
-		if (tmp->keyid == key) {
-			assert(tmp->value);
-			val = tmp->value;
-		}
-	}
-	ll_finish(row->attrlist);
-	
-	return(val);
-}
 
-// a and b point to elements in the list... and is not the pointer that the element has in it.  Therefore, it needs to be dereferenced a bit.
-static int sortfn(const void *a, const void *b) 
-{
-	stash_value_t *va, *vb;
-// 	replyrow_t *ra, *rb;
-	
-	replyrow_t * const *ra = a;
-	replyrow_t * const *rb = b;
-	
-	assert(a && b);
-	assert(stash_sortkey > 0);
-	
-// 	printf("a=%lu, b=%lu\n", (*ra), (*rb));
 
-	
-	assert((*ra)->identifier == 0x1234);
-	assert((*rb)->identifier == 0x1234);
-	
-	va = getvalue((*ra), stash_sortkey);
-	vb = getvalue((*rb), stash_sortkey);
-	if (va == NULL && vb == NULL) { return(0); }
-	else if (va && vb == NULL) { return(1); }
-	else if (va == NULL && vb) { return(-1); }
-	else {
-		assert(va && vb);
-		
-		if (va->valtype == STASH_VALTYPE_INT && vb->valtype == STASH_VALTYPE_INT) {
-			return(va->value.number - vb->value.number);
-		}
-		else if (va->valtype == STASH_VALTYPE_STR && vb->valtype == STASH_VALTYPE_STR) {
-			return(strncmp(va->value.str, vb->value.str, vb->datalen < va->datalen ? vb->datalen : va->datalen));
-		}
-		else {
-			// need to compare other type combinations.
-			assert(0);
-		}
-	}
-
-	return(0);
-}
 
 // reset the reply so that it can be iterated from the start again.  Normally used after resorting
 void stash_reply_reset(stash_reply_t *reply) 
@@ -2411,65 +2654,5 @@ void stash_reply_reset(stash_reply_t *reply)
 	// incomplete.  Need to go trhough the list of rows, and reset the 'done' flag.
 	assert(0);
 }
-
-// this function will take the reply array, and sort it based on the keyID supplied.  If rows do not contain this key, then they are moved to the bottom.
-void stash_sort(stash_reply_t *reply, stash_keyid_t key)
-{
-	int total, i;
-	replyrow_t **list;
-	
-	assert(reply && key > 0);
-
-	if (reply->rows) {
-		total = ll_count(reply->rows);
-		assert(total > 0);
-		
-		// create an array (of pointers) big enough to hold all the rows.
-		list = calloc(total, sizeof(replyrow_t *));
-		assert(list);
-		
-		// pull out the rows from the list, into the array.
-		for (i=0; i<total; i++) {
-			assert(list[i] == NULL);
-			list[i] = ll_pop_head(reply->rows);
-			assert(list[i]);
-			assert(list[i]->identifier == 0x1234);
-		}
-
-		// the original list should now be empty.
-		assert(ll_count(reply->rows) == 0);
-
-		// sort the rows
-		assert(stash_sortkey == 0);
-		stash_sortkey = key;
-		
-		qsort(list, total, sizeof(replyrow_t *), sortfn);
-		assert(stash_sortkey == key);
-		stash_sortkey = 0;
-		assert(stash_sortkey == 0);
-
-		// put the rows back into the list.
-		for (i=0; i<total; i++) {
-			assert(list[i]);
-			
-			// reset the 'done' marker because it has been sorted, and we start iterating through the list again.
-			list[i]->done = 0;
-			
-			ll_push_tail(reply->rows, list[i]);
-		}
-		
-		// free the array.
-		free(list);
-
-		// reset the 'current row' to indicate that it should start at the begining.
-		reply->curr_row = -1;
-	}
-	else {
-		assert(reply->curr_row == 0);
-		
-	}
-}
-
-
 
 

@@ -1,7 +1,32 @@
 Items to do:
 
+
 ----
 In stash_init(), remove the RISP commands that are commented out, and not required for network communications
+----
+when connecting to the server.  If the server does not accept, client will wait forever.
+----
+manpage: stash_cond_t
+manpage: stash_return_reply
+manpage: stash_reply_t
+manpage: stash_value_t
+----
+library interface: locksets
+----
+the connections need to take the priority into account when establishing connections.  First iteration allows for it to just 
+attempt the first, and if that drops off, try the next... and so on.
+----
+Add some comments to conn_free()
+----
+In stash.h, add a banner stating that instructions for using each function and structure can be found in the manpages.   We wont put a lot of API instructions in the .h file itself.
+----
+Add NDEPRICATED check around functionality which has been marked as depricated.  This will allow people to build a version that does not contain any depricated components, forcing them to use the proper stuff.
+----
+restructure stash.h to put functionality in sections.   This includes structure definitions where possible.
+----
+manpage: stash_sort
+----
+Sorting is done using the built in qsort, that requires some global variables to be set.  This makes the library to be non-thread-safe.  Should replace the qsort with a custom sort that works better with the kind of data that we have.
 ----
 
 

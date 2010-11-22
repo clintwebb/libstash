@@ -90,6 +90,7 @@
 #define STASH_CMD_COUNT            (139)
 #define STASH_CMD_EXPIRES          (140)
 #define STASH_CMD_DATETIME         (141)
+#define STASH_CMD_LIMIT            (142)
 
 													/// short string (160 to 191)
 #define STASH_CMD_USERNAME         (160)
@@ -342,6 +343,8 @@ stash_keyid_t stash_get_key_id(stash_t *stash, stash_nsid_t nsid, stash_tableid_
 
 stash_result_t stash_grant(stash_t *stash, stash_userid_t uid, stash_nsid_t nsid, stash_tableid_t tid, unsigned short rights);
 
+/////////////////////////////////////////////////////////////////////
+// Conditions
 
 stash_cond_t * __cond_key_equals(stash_keyid_t kid, stash_value_t *value);
 stash_cond_t * __cond_key_gt(stash_keyid_t kid, stash_value_t *value);
@@ -352,21 +355,43 @@ stash_cond_t * __cond_or(stash_cond_t *aa, stash_cond_t *bb);
 stash_cond_t * __cond_not(stash_cond_t *aa);
 void stash_cond_free(stash_cond_t *cond);
 
+/////////////////////////////////////////////////////////////////////
+// Queries
+
+typedef struct __stash_sortentry_t {
+	stash_keyid_t kid;
+	int desc;
+	struct __stash_sortentry_t *next;
+} stash_sortentry_t;
+
+stash_sortentry_t * stash_sortentry(stash_keyid_t kid, int desc, stash_sortentry_t *next);
+void stash_sortentry_free(stash_sortentry_t *entry);
+void stash_sort(stash_reply_t *reply, stash_sortentry_t *sort);
+void stash_sort_onkey(stash_reply_t *reply, stash_keyid_t key);
+
+
 typedef struct {
 	stash_nsid_t nsid;
 	stash_tableid_t tid;
 	int limit;
 	stash_cond_t *condition;
+	
+	/* first sort requirement. */
+	stash_sortentry_t *sort;
 } stash_query_t;
 
 stash_query_t * stash_query_new(stash_nsid_t nsid, stash_tableid_t tid);
 void stash_query_free(stash_query_t *query);
 void stash_query_condition(stash_query_t *query, stash_cond_t *condition);
 void stash_query_limit(stash_query_t *query, int limit);
+void stash_query_sort(stash_query_t *query, stash_keyid_t kid, int desc);
+void stash_query_sort_clear(stash_query_t *query);
 stash_reply_t * stash_query_execute(stash_t *stash, stash_query_t *query);
 
 // the stash_query function is deprecated, and may not be supported in future versions.
 stash_reply_t * stash_query(stash_t *stash, stash_nsid_t nsid, stash_tableid_t tid, int limit, stash_cond_t *condition);
+
+/////////////////////////////////////////////////////////////////////
 
 stash_result_t stash_get_user_id(stash_t *stash, const char *username, stash_userid_t *uid);
 stash_result_t stash_get_table_id(stash_t *stash, stash_nsid_t nsid, const char *tablename, stash_userid_t *tid);
@@ -378,6 +403,5 @@ stash_rowid_t stash_rowid(stash_reply_t *reply);
 int stash_getlength(stash_reply_t *reply, stash_keyid_t key);
 
 void stash_reply_reset(stash_reply_t *reply); 
-void stash_sort(stash_reply_t *reply, stash_keyid_t key);
 
 #endif
