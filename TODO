@@ -2,8 +2,6 @@ Items to do:
 
 
 ----
-In stash_init(), remove the RISP commands that are commented out, and not required for network communications
-----
 when connecting to the server.  If the server does not accept, client will wait forever.
 ----
 manpage: stash_cond_t

@@ -267,10 +267,6 @@ stash_t * stash_init(stash_t *stash)
 	
 	s->risp = risp_init(NULL);
 	assert(s->risp != NULL);
-//	risp_add_command(control->risp, HTTP_CMD_CLEAR,        &cmdClear);
-//	risp_add_command(control->risp, HTTP_CMD_FILE,         &cmdFile);
-//	risp_add_command(control->risp, HTTP_CMD_CONTENT_TYPE, &cmdContentType);
-//	risp_add_command(control->risp, HTTP_CMD_REPLY,        &cmdReply);
 
 	s->risp_reply = risp_init(NULL);
 	assert(s->risp_reply);
