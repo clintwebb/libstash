@@ -1,6 +1,6 @@
 ## make file for libstash.
 
-all: libstash.so.1.0.1
+all: libstash.so.1.0.1 makeman
 
 ARGS=-g -Wall
 OBJS=libstash.o
@@ -35,68 +35,23 @@ uninstall: /usr/include/stash.h /usr/lib/libstash.so.1.0.1
 	rm /usr/lib/libstash.so.1.0.1
 	rm /usr/lib/libstash.so.1
 	rm /usr/lib/libstash.so
+	
 
-libstash.3.gz: libstash.3
-	gzip -c $^ > $@
+makeman: 
+	@pushd manpages
+	@for i in *.3; do gzip -c $$i > $$i.gz; done
+	@popd
 
-stash_t.3.gz: stash_t.3
-	gzip -c $^ > $@
-
-stash_init.3.gz: stash_init.3
-	gzip -c $^ > $@
-
-stash_free.3.gz: stash_free.3
-	gzip -c $^ > $@
-
-stash_shutdown.3.gz: stash_shutdown.3
-	gzip -c $^ > $@
-
-stash_query_t.3.gz: stash_query_t.3
-	gzip -c $^ > $@
-
-stash_query_new.3.gz: stash_query_new.3
-	gzip -c $^ > $@
-
-stash_query_free.3.gz: stash_query_free.3
-	gzip -c $^ > $@
-
-stash_query_condition.3.gz: stash_query_condition.3
-	gzip -c $^ > $@
-
-stash_query_limit.3.gz: stash_query_limit.3
-	gzip -c $^ > $@
-
-stash_query_sort.3.gz: stash_query_sort.3
-	gzip -c $^ > $@
-
-stash_query_sort_clear.3.gz: stash_query_sort_clear.3
-	gzip -c $^ > $@
-
-stash_query_execute.3.gz: stash_query_execute.3
-	gzip -c $^ > $@
-
-stash_sortentry_t.3.gz: stash_sortentry_t.3
-	gzip -c $^ > $@
-
-stash_sortentry.3.gz: stash_sortentry.3
-	gzip -c $^ > $@
-
-stash_sortentry_free.3.gz: stash_sortentry_free.3
-	gzip -c $^ > $@
-
-stash_sort.3.gz: stash_sort.3
-	gzip -c $^ > $@
-
-stash_sort_onkey.3.gz: stash_sort_onkey.3
-	gzip -c $^ > $@
-
-
-man-pages: libstash.3.gz stash_t.3.gz stash_init.3.gz stash_free.3.gz stash_shutdown.3.gz stash_query_t.3.gz stash_query_new.3.gz stash_query_free.3.gz stash_query_condition.3.gz stash_query_limit.3.gz stash_query_execute.3.gz stash_query_sort.3.gz stash_sortentry_t.3.gz stash_sortentry.3.gz stash_sortentry_free.3.gz stash_sort.3.gz stash_sort_onkey.3.gz stash_query_sort_clear.3.gz
-	for i in $^; do cp -v $$i $(MANPATH)/man3/; done
+man-pages: 
+	@pushd manpages
+	cp -v *.3.gz $(MANPATH)/man3/
+	@popd
 	@echo "Man-pages Install complete."
+
 
 
 clean:
 	@-[ -e libstash.o ] && rm libstash.o
 	@-[ -e libstash.so* ] && rm libstash.so*
-	@-rm *.3.gz
+	@-rm manpages/*.3.gz
+	
