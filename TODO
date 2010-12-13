@@ -1,6 +1,7 @@
 Items to do:
 
-
+----
+Modify the stash_t object so that is includes 'current_nsid' and 'current_tid'.  SO that we dont have to include this information in every single stash call.
 ----
 when connecting to the server.  If the server does not accept, client will wait forever.
 ----
@@ -26,6 +27,18 @@ manpage: stash_sort
 ----
 Sorting is done using the built in qsort, that requires some global variables to be set.  This makes the library to be non-thread-safe.  Should replace the qsort with a custom sort that works better with the kind of data that we have.
 ----
+manpage: __cond_key_equals
+manpage: __cond_key_gt
+manpage: __cond_key_exists
+manpage: __cond_name
+manpage: __cond_and
+manpage: __cond_or
+manpage: __cond_not
+manpage: stash_cond_free
 
-
-
+----
+When creating attribute lists, or queries, instead of providing __value*, we can use __bind*.  This will accept a pointer to a variable, and when it is used, it will use the contents of the pointer instead of a static value.
+This will allow for tight loops that modify the data, but not the list of attributes, so loops can be faster, and attribute lists dont need to keep being created and destroyed.
+----
+Login passwords should not be sent as plaintext, but should be encrypted (using bcrypt?).
+----

@@ -1,11 +1,23 @@
 .\" man page for libstash
 .\" Contact webb.clint@gmail.com to correct errors or omissions. 
-.TH stash_query_t 3 "23 October 2010" "0.07.00" "libstash - Library for accessing a Stash data storage service."
+.TH stash_cond_t 3 "7 December 2010" "0.07.00" "libstash - Library for accessing a Stash data storage service."
 .SH NAME
-stash_query_t - stash query object.
+stash_cond_t - stash condition object.
 .SH DESCRIPTION
-.B stash_query_t
-is a structure that is used to generate queries.  
+.B stash_cond_t
+is a structure that is used to set conditions on queries.  It is generally used by stringing one or more conditions together.
+
+stash_cond_t * __cond_key_equals(stash_keyid_t kid, stash_value_t *value);
+stash_cond_t * __cond_key_gt(stash_keyid_t kid, stash_value_t *value);
+stash_cond_t * __cond_key_exists(stash_keyid_t kid);
+stash_cond_t * __cond_name(stash_nameid_t nameid, const char *name);
+stash_cond_t * __cond_and(stash_cond_t *aa, stash_cond_t *bb);
+stash_cond_t * __cond_or(stash_cond_t *aa, stash_cond_t *bb);
+stash_cond_t * __cond_not(stash_cond_t *aa);
+void stash_cond_free(stash_cond_t *cond);
+
+
+
 .SS Initialization 
 .B stash_query_new(nsid, tid)
 is used to create a new query object.  It is tied to a particular namespace and table.

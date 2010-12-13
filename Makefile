@@ -38,14 +38,10 @@ uninstall: /usr/include/stash.h /usr/lib/libstash.so.1.0.1
 	
 
 makeman: 
-	@pushd manpages
-	@for i in *.3; do gzip -c $$i > $$i.gz; done
-	@popd
+	@for i in manpages/*.3; do gzip -c $$i > $$i.gz; done
 
 man-pages: 
-	@pushd manpages
-	cp -v *.3.gz $(MANPATH)/man3/
-	@popd
+	cp -v manpages/*.3.gz $(MANPATH)/man3/
 	@echo "Man-pages Install complete."
 
 
