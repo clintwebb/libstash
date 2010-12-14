@@ -331,6 +331,8 @@ stash_t * stash_init(stash_t *stash)
 	
 	s->next_reqid = 1;
 	
+	s->curr_nsid = 0;
+	
 	return(s);
 }
 
@@ -1096,19 +1098,17 @@ stash_result_t stash_set_password(stash_t *stash, stash_userid_t uid, const char
 	return(res);
 }
 
-
-stash_result_t stash_get_namespace_id(stash_t *stash, const char *namespace, stash_nsid_t *nsid)
+// Send a request off, to get the ID of a namespace, and set it as the current 
+// namespace for all subsequent requests.
+stash_result_t stash_set_namespace(stash_t *stash, const char *namespace)
 {
 	stash_result_t res;
 	stash_reply_t *reply;
 	expbuf_t *data;
 	
-	assert(stash);
-	assert(namespace);
-	assert(nsid);
+	assert(stash && namespace);
 
-	// get a buffer and bui
-	data = expbuf_init(NULL, 0);
+	data = expbuf_init(NULL, 32);
 	assert(data);
 	
 	rispbuf_addStr(data, STASH_CMD_NAMESPACE, strlen(namespace), namespace);
@@ -1122,7 +1122,8 @@ stash_result_t stash_get_namespace_id(stash_t *stash, const char *namespace, sta
 	// process the reply and store the results in the data pointers that was provided.
 	res = reply->resultcode;
 	if (res == STASH_ERR_OK) {
-		*nsid = reply->nsid;
+		assert(reply->nsid > 0);
+		stash->curr_nsid = reply->nsid;
 	}
 	reply_free(reply);
 	
@@ -1130,22 +1131,22 @@ stash_result_t stash_get_namespace_id(stash_t *stash, const char *namespace, sta
 }
 
 
-stash_result_t stash_create_table(stash_t *stash, stash_nsid_t nsid, const char *tablename, int option_map, stash_tableid_t *tid)
+stash_result_t stash_create_table(stash_t *stash, const char *tablename, int option_map, stash_tableid_t *tid)
 {
 	stash_result_t res;
 	stash_reply_t *reply;
 	expbuf_t *data;
 	
 	assert(stash);
-	assert(nsid > 0);
 	assert(tablename);
 	assert(tid);
+	assert(stash->curr_nsid > 0);
 	
 	// get a buffer and bui
 	data = expbuf_init(NULL, 0);
 	assert(data);
 	
-	rispbuf_addInt(data, STASH_CMD_NAMESPACE_ID, nsid);
+	rispbuf_addInt(data, STASH_CMD_NAMESPACE_ID, stash->curr_nsid);
 	rispbuf_addStr(data, STASH_CMD_TABLE, strlen(tablename), tablename);
 
 	if (option_map & STASH_TABOPT_STRICT) rispbuf_addCmd(data, STASH_CMD_STRICT);
@@ -1410,7 +1411,6 @@ void stash_build_value(expbuf_t *buf, stash_value_t *value)
 stash_reply_t *
 	stash_create_row(
 		stash_t *stash, 
-		stash_nsid_t nsid, 
 		stash_tableid_t tid, 
 		stash_nameid_t nameid, 
 		const char *name, 
@@ -1421,7 +1421,7 @@ stash_reply_t *
 	attr_t *attr;
 	
 	assert(stash);
-	assert(nsid > 0);
+	assert(stash->curr_nsid > 0);
 	assert(tid > 0);
 	assert((nameid == 0 && name) || (nameid > 0 && name == NULL));
 	assert((alist == NULL) || (alist && ll_count(alist)));
@@ -1438,7 +1438,7 @@ stash_reply_t *
 	assert(BUF_LENGTH(stash->buf_value) == 0);
 	
 	
-	rispbuf_addInt(stash->buf_set, STASH_CMD_NAMESPACE_ID, nsid);
+	rispbuf_addInt(stash->buf_set, STASH_CMD_NAMESPACE_ID, stash->curr_nsid);
 	rispbuf_addInt(stash->buf_set, STASH_CMD_TABLE_ID, tid);
 	if (nameid > 0) {
 		rispbuf_addInt(stash->buf_set, STASH_CMD_NAME_ID, nameid);
@@ -1494,12 +1494,13 @@ stash_reply_t *
 //-----------------------------------------------------------------------------
 // This is a pretty important function.  It needs to add a row into a table, 
 // and set the initial attributes.
-stash_reply_t * stash_set(stash_t *stash, stash_nsid_t nsid, stash_tableid_t tid, stash_rowid_t rowid, stash_attrlist_t *alist)
+stash_reply_t * stash_set(stash_t *stash, stash_tableid_t tid, stash_rowid_t rowid, stash_attrlist_t *alist)
 {
 	stash_reply_t *reply;
 	attr_t *attr;
 
-	assert(stash && nsid > 0 && tid > 0 && rowid > 0);
+	assert(stash);
+	assert(stash->curr_nsid > 0 && tid > 0 && rowid > 0);
 	assert(alist && ll_count(alist));
 
 	// get a buffer and bui
@@ -1512,7 +1513,7 @@ stash_reply_t * stash_set(stash_t *stash, stash_nsid_t nsid, stash_tableid_t tid
 	assert(stash->buf_value);
 	assert(BUF_LENGTH(stash->buf_value) == 0);
 
-	rispbuf_addInt(stash->buf_set, STASH_CMD_NAMESPACE_ID, nsid);
+	rispbuf_addInt(stash->buf_set, STASH_CMD_NAMESPACE_ID, stash->curr_nsid);
 	rispbuf_addInt(stash->buf_set, STASH_CMD_TABLE_ID, tid);
 	rispbuf_addInt(stash->buf_set, STASH_CMD_ROW_ID, rowid);
 
@@ -1592,19 +1593,20 @@ void stash_return_reply(stash_reply_t *reply)
 }
 
 
-stash_keyid_t stash_get_key_id(stash_t *stash, stash_nsid_t nsid, stash_tableid_t tid, const char *keyname)
+stash_keyid_t stash_get_key_id(stash_t *stash, stash_tableid_t tid, const char *keyname)
 {
 	stash_keyid_t kid = 0;
 	stash_reply_t *reply;
 	expbuf_t *data;
 	
-	assert(stash && nsid > 0 && tid > 0 && keyname);
+	assert(stash);
+	assert(stash->curr_nsid > 0 && tid > 0 && keyname);
 	
 	// get a buffer and bui
 	data = expbuf_init(NULL, 0);
 	assert(data);
 	
-	rispbuf_addInt(data, STASH_CMD_NAMESPACE_ID, nsid);
+	rispbuf_addInt(data, STASH_CMD_NAMESPACE_ID, stash->curr_nsid);
 	rispbuf_addInt(data, STASH_CMD_TABLE_ID, tid);
 	rispbuf_addStr(data, STASH_CMD_KEY, strlen(keyname), keyname);
 	
@@ -1624,7 +1626,7 @@ stash_keyid_t stash_get_key_id(stash_t *stash, stash_nsid_t nsid, stash_tableid_
 }
 
 
-stash_result_t stash_grant(stash_t *stash, stash_userid_t uid, stash_nsid_t nsid, stash_tableid_t tid, unsigned short option_map)
+stash_result_t stash_grant(stash_t *stash, stash_userid_t uid, stash_tableid_t tid, unsigned short option_map)
 {
 	stash_result_t res;
 	stash_reply_t *reply;
@@ -1638,7 +1640,7 @@ stash_result_t stash_grant(stash_t *stash, stash_userid_t uid, stash_nsid_t nsid
 	assert(data);
 	
 	if (uid > 0)  rispbuf_addInt(data, STASH_CMD_USER_ID, uid);
-	if (nsid > 0) rispbuf_addInt(data, STASH_CMD_NAMESPACE_ID, nsid);
+	if (stash->curr_nsid > 0) rispbuf_addInt(data, STASH_CMD_NAMESPACE_ID, stash->curr_nsid);
 	if (tid > 0)  rispbuf_addInt(data, STASH_CMD_TABLE_ID, tid);
 	
 	if (option_map & STASH_RIGHT_ADDUSER) rispbuf_addCmd(data, STASH_CMD_RIGHT_ADDUSER);
@@ -2093,15 +2095,14 @@ void stash_sort_onkey(stash_reply_t *reply, stash_keyid_t key)
 
 // create a query object that will be used to build a query and then execute it.  
 // Object will need to be free'd with stash_query_free().
-stash_query_t * stash_query_new(stash_nsid_t nsid, stash_tableid_t tid)
+stash_query_t * stash_query_new(stash_tableid_t tid)
 {
 	stash_query_t *query;
 	
-	assert(nsid > 0 && tid > 0);
+	assert(tid > 0);
 	query = calloc(1, sizeof(*query));
 	assert(query);
 	
-	query->nsid = nsid;
 	query->tid = tid;
 	assert(query->limit == 0);
 	assert(query->condition == NULL);
@@ -2224,12 +2225,12 @@ stash_reply_t * stash_query_execute(stash_t *stash, stash_query_t *query)
 	
 	
 	assert(stash && query);
-	assert(query->nsid > 0 && query->tid > 0 && query->limit >= 0);
+	assert(stash->curr_nsid > 0 && query->tid > 0 && query->limit >= 0);
 	
 	buf_query = expbuf_init(NULL, 0);
 	
 	// build the rest of the message.
-	rispbuf_addInt(buf_query, STASH_CMD_NAMESPACE_ID, query->nsid);
+	rispbuf_addInt(buf_query, STASH_CMD_NAMESPACE_ID, stash->curr_nsid);
 	rispbuf_addInt(buf_query, STASH_CMD_TABLE_ID, query->tid);
 	
 	if (query->condition) {
@@ -2292,13 +2293,14 @@ stash_reply_t * stash_query_execute(stash_t *stash, stash_query_t *query)
 
 // This function is retained for compatibility reasons.  It builds a query 
 // based on the limited parameters, and executes it.  It returns the reply.
-stash_reply_t * stash_query(stash_t *stash, stash_nsid_t nsid, stash_tableid_t tid, int limit, stash_cond_t *condition)
+stash_reply_t * stash_query(stash_t *stash, stash_tableid_t tid, int limit, stash_cond_t *condition)
 {
 	stash_reply_t *reply;
 	stash_query_t *query;
 	
-	assert(stash && nsid > 0 && tid > 0 && limit >= 0);
-	query = stash_query_new(nsid, tid);
+	assert(stash);
+	assert(stash->curr_nsid > 0 && tid > 0 && limit >= 0);
+	query = stash_query_new(tid);
 	assert(query);
 	
 	stash_query_limit(query, limit);
@@ -2346,19 +2348,20 @@ stash_result_t stash_get_user_id(stash_t *stash, const char *username, stash_use
 }
 
 
-stash_result_t stash_get_table_id(stash_t *stash, stash_nsid_t nsid, const char *tablename, stash_userid_t *tid)
+stash_result_t stash_get_table_id(stash_t *stash, const char *tablename, stash_userid_t *tid)
 {
 	stash_result_t res;
 	stash_reply_t *reply;
 	expbuf_t *data;
 	
-	assert(stash && nsid > 0 && tablename && tid);
+	assert(stash);
+	assert(stash->curr_nsid > 0 && tablename && tid);
 	
 	// get a buffer and bui
 	data = expbuf_init(NULL, 128);
 	assert(data);
 	
-	rispbuf_addInt(data, STASH_CMD_NAMESPACE_ID, nsid);
+	rispbuf_addInt(data, STASH_CMD_NAMESPACE_ID, stash->curr_nsid);
 	rispbuf_addStr(data, STASH_CMD_TABLE, strlen(tablename), tablename);
 	
 	// send the request and receive the reply.
@@ -2587,11 +2590,12 @@ stash_rowid_t stash_rowid(stash_reply_t *reply)
 
 
 
-stash_reply_t * stash_expire(stash_t *stash, stash_nsid_t nsid, stash_tableid_t tid, stash_rowid_t rowid, stash_keyid_t keyid, stash_expiry_t expires)
+stash_reply_t * stash_expire(stash_t *stash, stash_tableid_t tid, stash_rowid_t rowid, stash_keyid_t keyid, stash_expiry_t expires)
 {
 	stash_reply_t *reply;
 	
-	assert(stash && nsid > 0 && tid > 0 && rowid);
+	assert(stash);
+	assert(stash->curr_nsid > 0 && tid > 0 && rowid);
 	assert(keyid >= 0);
 	assert(expires >= 0);
 	
@@ -2599,7 +2603,7 @@ stash_reply_t * stash_expire(stash_t *stash, stash_nsid_t nsid, stash_tableid_t 
 	assert(stash->buf_set);
 	assert(BUF_LENGTH(stash->buf_set) == 0);
 	
-	rispbuf_addInt(stash->buf_set, STASH_CMD_NAMESPACE_ID, nsid);
+	rispbuf_addInt(stash->buf_set, STASH_CMD_NAMESPACE_ID, stash->curr_nsid);
 	rispbuf_addInt(stash->buf_set, STASH_CMD_TABLE_ID, tid);
 	rispbuf_addInt(stash->buf_set, STASH_CMD_ROW_ID, rowid);
 	rispbuf_addInt(stash->buf_set, STASH_CMD_KEY_ID, keyid);
@@ -2613,18 +2617,19 @@ stash_reply_t * stash_expire(stash_t *stash, stash_nsid_t nsid, stash_tableid_t 
 }
 
 
-stash_reply_t * stash_delete(stash_t *stash, stash_nsid_t nsid, stash_tableid_t tid, stash_rowid_t rowid, stash_keyid_t keyid)
+stash_reply_t * stash_delete(stash_t *stash, stash_tableid_t tid, stash_rowid_t rowid, stash_keyid_t keyid)
 {
 	stash_reply_t *reply;
 	
-	assert(stash && nsid > 0 && tid > 0 && rowid);
+	assert(stash);
+	assert(stash->curr_nsid > 0 && tid > 0 && rowid);
 	assert(keyid >= 0);
 	
 	// get a buffer and bui
 	assert(stash->buf_set);
 	assert(BUF_LENGTH(stash->buf_set) == 0);
 	
-	rispbuf_addInt(stash->buf_set, STASH_CMD_NAMESPACE_ID, nsid);
+	rispbuf_addInt(stash->buf_set, STASH_CMD_NAMESPACE_ID, stash->curr_nsid);
 	rispbuf_addInt(stash->buf_set, STASH_CMD_TABLE_ID, tid);
 	rispbuf_addInt(stash->buf_set, STASH_CMD_ROW_ID, rowid);
 	rispbuf_addInt(stash->buf_set, STASH_CMD_KEY_ID, keyid);
