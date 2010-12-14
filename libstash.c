@@ -1106,26 +1106,33 @@ stash_result_t stash_set_namespace(stash_t *stash, const char *namespace)
 	stash_reply_t *reply;
 	expbuf_t *data;
 	
-	assert(stash && namespace);
+	assert(stash);
 
-	data = expbuf_init(NULL, 32);
-	assert(data);
-	
-	rispbuf_addStr(data, STASH_CMD_NAMESPACE, strlen(namespace), namespace);
-	
-	// send the request and receive the reply.
-	reply = send_request(stash, STASH_CMD_GETID, data);
-	
-	data = expbuf_free(data);
-	assert(data == NULL);
-	
-	// process the reply and store the results in the data pointers that was provided.
-	res = reply->resultcode;
-	if (res == STASH_ERR_OK) {
-		assert(reply->nsid > 0);
-		stash->curr_nsid = reply->nsid;
+	if (namespace == NULL) {
+		stash->curr_nsid = 0;
+		res = STASH_ERR_OK;
 	}
-	reply_free(reply);
+	else {
+	
+		data = expbuf_init(NULL, 32);
+		assert(data);
+		
+		rispbuf_addStr(data, STASH_CMD_NAMESPACE, strlen(namespace), namespace);
+		
+		// send the request and receive the reply.
+		reply = send_request(stash, STASH_CMD_GETID, data);
+		
+		data = expbuf_free(data);
+		assert(data == NULL);
+		
+		// process the reply and store the results in the data pointers that was provided.
+		res = reply->resultcode;
+		if (res == STASH_ERR_OK) {
+			assert(reply->nsid > 0);
+			stash->curr_nsid = reply->nsid;
+		}
+		reply_free(reply);
+	}
 	
 	return(res);
 }
