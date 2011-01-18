@@ -91,6 +91,7 @@
 #define STASH_CMD_EXPIRES          (140)
 #define STASH_CMD_DATETIME         (141)
 #define STASH_CMD_LIMIT            (142)
+#define STASH_CMD_BLOB             (143)
 
 													/// short string (160 to 191)
 #define STASH_CMD_USERNAME         (160)
@@ -253,11 +254,14 @@ typedef list_t stash_attrlist_t;
 #define STASH_VALTYPE_INT   1
 #define STASH_VALTYPE_STR   2
 #define STASH_VALTYPE_AUTO  3
+#define STASH_VALTYPE_BIND_INT  11
+
 typedef struct {
 	short int valtype;
 	union {
 		char *str;			// STASH_VALTYPE_STR
 		int number;			// STASH_VALTYPE_INT
+		int *number_ptr;	// STASH_VALTYPE_BIND_INT
 	} value;
 	unsigned int datalen;
 } stash_value_t;
@@ -309,6 +313,8 @@ stash_result_t stash_connect(stash_t *stash);
 
 // set the namespace.  All subsequent operations will be on the specified namespace.
 stash_result_t stash_set_namespace(stash_t *stash, const char *namespace);
+stash_result_t stash_get_namespace_id(stash_t *stash, const char *namespace, stash_nsid_t *nsid);
+
 
 const char *stash_err_text(stash_result_t res);
 
@@ -329,6 +335,11 @@ stash_value_t * __value_int(int number);
 stash_value_t * __value_auto(void);
 stash_value_t * __value_blob(void *ptr, int len);
 
+// stash_value_t * __bind_str(const char *str);
+stash_value_t * __bind_int(int *number);
+// stash_value_t * __bind_blob(void *ptr, int len);
+
+
 void stash_set_attr(stash_attrlist_t *alist, stash_keyid_t keyid, stash_value_t *value, stash_expiry_t expires);
 void stash_build_value(expbuf_t *buf, stash_value_t *value);
 stash_value_t * stash_parse_value(const risp_data_t *data, const risp_length_t length);
@@ -343,7 +354,7 @@ void stash_return_reply(stash_reply_t *reply);
 
 stash_keyid_t stash_get_key_id(stash_t *stash, stash_tableid_t tid, const char *keyname);
 
-stash_result_t stash_grant(stash_t *stash, stash_userid_t uid, stash_tableid_t tid, unsigned short rights);
+stash_result_t stash_grant(stash_t *stash, stash_userid_t uid, stash_nsid_t nsid, stash_tableid_t tid, unsigned short rights);
 
 /////////////////////////////////////////////////////////////////////
 // Conditions
@@ -395,7 +406,7 @@ stash_reply_t * stash_query(stash_t *stash, stash_tableid_t tid, int limit, stas
 /////////////////////////////////////////////////////////////////////
 
 stash_result_t stash_get_user_id(stash_t *stash, const char *username, stash_userid_t *uid);
-stash_result_t stash_get_table_id(stash_t *stash, const char *tablename, stash_userid_t *tid);
+stash_result_t stash_get_table_id(stash_t *stash, const char *tablename, stash_tableid_t *tid);
 
 int stash_nextrow(stash_reply_t *reply);
 const char * stash_getstr(stash_reply_t *reply, stash_keyid_t key);

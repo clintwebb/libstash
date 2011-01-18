@@ -1220,7 +1220,10 @@ void stash_set_attr(stash_attrlist_t *alist, stash_keyid_t keyid, stash_value_t 
 {
 	attr_t *attr;
 	
-	assert(alist && keyid > 0 && value && expires >= 0);
+	assert(alist);
+	assert(keyid > 0);
+	assert(value);
+	assert(expires >= 0);
 	
 	attr = calloc(1, sizeof(attr_t));
 	assert(attr);
@@ -1295,6 +1298,22 @@ stash_value_t * __value_auto(void)
 	return(val);
 }
 
+stash_value_t * __bind_int(int *ptr)
+{
+	stash_value_t *val;
+	
+	assert(ptr);
+	
+	val = calloc(1, sizeof(*val));
+	assert(val);
+	
+	val->valtype = STASH_VALTYPE_BIND_INT;
+	val->value.number_ptr = ptr;
+	
+	return(val);
+}
+
+
 
 // PERF: use a pool of values so that we dont need to keep malloc'ing new ones.
 // PERF: use a pool of same sized data buffers.
@@ -1315,7 +1334,6 @@ stash_value_t * stash_parse_value(const risp_data_t *data, const risp_length_t l
 	assert(rr);
 	
 	processed = risp_process(rr, NULL, length, data);
-// 	printf("stash_parse_value:  processed=%d, length=%d\n", processed, length);
 	assert(processed == length);
 	
 	if (risp_isset(rr, STASH_CMD_INTEGER)) {
@@ -1378,6 +1396,11 @@ void stash_build_value(expbuf_t *buf, stash_value_t *value)
 		case STASH_VALTYPE_INT:
 			rispbuf_addInt(buf, STASH_CMD_INTEGER, value->value.number);
 			break;
+			
+		case STASH_VALTYPE_BIND_INT:
+			assert(value->value.number_ptr != NULL);
+			rispbuf_addInt(buf, STASH_CMD_INTEGER, *(value->value.number_ptr));
+			break;
 
 		case STASH_VALTYPE_STR:
 			assert(value->datalen >= 0);
@@ -1392,13 +1415,11 @@ void stash_build_value(expbuf_t *buf, stash_value_t *value)
 			
 		case STASH_VALTYPE_AUTO:
 			rispbuf_addCmd(buf, STASH_CMD_AUTO);
-// 			printf("stash_build_value: AUTO\n");
 			break;
-	
+
 		default:
 			assert(0);
-		// 				STASH_CMD_AUTO            [optional]
-		// 				STASH_CMD_DATETIME <str>  [optional]
+ 		// 				STASH_CMD_DATETIME <str>  [optional]
 		// 				STASH_CMD_DATE <int32>    [optional]
 		// 				STASH_CMD_TIME <int32>    [optional]
 		// 				STASH_CMD_HASHMAP <>      [optional]
@@ -1632,8 +1653,41 @@ stash_keyid_t stash_get_key_id(stash_t *stash, stash_tableid_t tid, const char *
 	return(kid);
 }
 
+stash_result_t stash_get_namespace_id(stash_t *stash, const char *namespace, stash_nsid_t *nsid)
+{
+	stash_result_t res;
+	stash_reply_t *reply;
+	expbuf_t *data;
+	
+	assert(stash);
+	assert(namespace);
+	assert(nsid);
+	
+	// get a buffer and bui
+	data = expbuf_init(NULL, 0);
+	assert(data);
+	
+	rispbuf_addStr(data, STASH_CMD_NAMESPACE, strlen(namespace), namespace);
+	
+	// send the request and receive the reply.
+	reply = send_request(stash, STASH_CMD_GETID, data);
+	
+	data = expbuf_free(data);
+	assert(data == NULL);
+	
+	// process the reply and store the results in the data pointers that was provided.
+	res = reply->resultcode;
+	if (res == STASH_ERR_OK) {
+		*nsid = reply->nsid;
+	}
+	reply_free(reply);
+	
+	return(res);
+}
 
-stash_result_t stash_grant(stash_t *stash, stash_userid_t uid, stash_tableid_t tid, unsigned short option_map)
+
+
+stash_result_t stash_grant(stash_t *stash, stash_userid_t uid, stash_nsid_t nsid, stash_tableid_t tid, unsigned short option_map)
 {
 	stash_result_t res;
 	stash_reply_t *reply;
@@ -1647,8 +1701,10 @@ stash_result_t stash_grant(stash_t *stash, stash_userid_t uid, stash_tableid_t t
 	assert(data);
 	
 	if (uid > 0)  rispbuf_addInt(data, STASH_CMD_USER_ID, uid);
-	if (stash->curr_nsid > 0) rispbuf_addInt(data, STASH_CMD_NAMESPACE_ID, stash->curr_nsid);
-	if (tid > 0)  rispbuf_addInt(data, STASH_CMD_TABLE_ID, tid);
+	if (nsid > 0) {
+		rispbuf_addInt(data, STASH_CMD_NAMESPACE_ID, nsid);
+		if (tid > 0) rispbuf_addInt(data, STASH_CMD_TABLE_ID, tid);
+	}
 	
 	if (option_map & STASH_RIGHT_ADDUSER) rispbuf_addCmd(data, STASH_CMD_RIGHT_ADDUSER);
 	if (option_map & STASH_RIGHT_CREATE)  rispbuf_addCmd(data, STASH_CMD_RIGHT_CREATE);
@@ -1812,6 +1868,13 @@ void stash_cond_free(stash_cond_t *cond)
 			assert(cond->cb);
 			stash_cond_free(cond->ca);
 			stash_cond_free(cond->cb);
+			break;
+
+		case STASH_CONDTYPE_EXISTS:
+			assert(cond->kid > 0);
+			assert(cond->value == NULL);
+			assert(cond->ca == NULL);
+			assert(cond->cb == NULL);
 			break;
 			
 		default:
@@ -2038,47 +2101,48 @@ void stash_sort(stash_reply_t *reply, stash_sortentry_t *sort)
 	
 	if (reply->rows) {
 		total = ll_count(reply->rows);
-		assert(total > 0);
+		if (total > 0) {
 		
-		// create an array (of pointers) big enough to hold all the rows.
-		list = calloc(total, sizeof(replyrow_t *));
-		assert(list);
-		
-		// pull out the rows from the list, into the array.
-		for (i=0; i<total; i++) {
-			assert(list[i] == NULL);
-			list[i] = ll_pop_head(reply->rows);
-			assert(list[i]);
-			assert(list[i]->identifier == 0x1234);
-		}
-		
-		// the original list should now be empty.
-		assert(ll_count(reply->rows) == 0);
-		
-		// sort the rows
-		assert(__sortentry == NULL);
-		__sortentry = sort;
-		
-		qsort(list, total, sizeof(replyrow_t *), sortfn);
-		assert(__sortentry == sort);
-		__sortentry = NULL;
-		assert(__sortentry == NULL);
-		
-		// put the rows back into the list.
-		for (i=0; i<total; i++) {
-			assert(list[i]);
+			// create an array (of pointers) big enough to hold all the rows.
+			list = calloc(total, sizeof(replyrow_t *));
+			assert(list);
 			
-			// reset the 'done' marker because it has been sorted, and we start iterating through the list again.
-			list[i]->done = 0;
+			// pull out the rows from the list, into the array.
+			for (i=0; i<total; i++) {
+				assert(list[i] == NULL);
+				list[i] = ll_pop_head(reply->rows);
+				assert(list[i]);
+				assert(list[i]->identifier == 0x1234);
+			}
 			
-			ll_push_tail(reply->rows, list[i]);
+			// the original list should now be empty.
+			assert(ll_count(reply->rows) == 0);
+			
+			// sort the rows
+			assert(__sortentry == NULL);
+			__sortentry = sort;
+			
+			qsort(list, total, sizeof(replyrow_t *), sortfn);
+			assert(__sortentry == sort);
+			__sortentry = NULL;
+			assert(__sortentry == NULL);
+			
+			// put the rows back into the list.
+			for (i=0; i<total; i++) {
+				assert(list[i]);
+				
+				// reset the 'done' marker because it has been sorted, and we start iterating through the list again.
+				list[i]->done = 0;
+				
+				ll_push_tail(reply->rows, list[i]);
+			}
+			
+			// free the array.
+			free(list);
+			
+			// reset the 'current row' to indicate that it should start at the begining.
+			reply->curr_row = -1;
 		}
-		
-		// free the array.
-		free(list);
-		
-		// reset the 'current row' to indicate that it should start at the begining.
-		reply->curr_row = -1;
 	}
 	else {
 		assert(reply->curr_row == 0);
@@ -2355,7 +2419,7 @@ stash_result_t stash_get_user_id(stash_t *stash, const char *username, stash_use
 }
 
 
-stash_result_t stash_get_table_id(stash_t *stash, const char *tablename, stash_userid_t *tid)
+stash_result_t stash_get_table_id(stash_t *stash, const char *tablename, stash_tableid_t *tid)
 {
 	stash_result_t res;
 	stash_reply_t *reply;
